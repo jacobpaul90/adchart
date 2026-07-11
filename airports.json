@@ -1,0 +1,8 @@
+{
+  "cycle": "2606",
+  "generated": "starter sample \u2014 run generate_airports_json.py to populate all airports",
+  "airports": {
+    "KDSM": { "name": "Des Moines International Airport", "pdf": "https://aeronav.faa.gov/d-tpp/2606/00117ad.pdf#nameddest=(DSM)" },
+    "DSM":  { "name": "Des Moines International Airport", "pdf": "https://aeronav.faa.gov/d-tpp/2606/00117ad.pdf#nameddest=(DSM)" }
+  }
+}
