@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aerodrome Chart Lookup</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%88%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #dedede;
+    --bg-panel: #ececec;
+    --border: #767676;
+    --border-strong: #3f3f3f;
+    --stripe-light: #ffffff;
+    --stripe-dark: #cfcfcf;
+    --accent: #3f6fb4;
+    --text: #000000;
+    --text-muted: #6b6b6b;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    font-family: "Charcoal", Geneva, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: #7f97a3;
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(255,255,255,0.10), transparent 40%),
+      radial-gradient(circle at 80% 85%, rgba(0,0,0,0.12), transparent 40%);
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .window {
+    width: 100%;
+    max-width: 430px;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, 0.35),
+      0 1px 0 rgba(255, 255, 255, 0.5) inset;
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      var(--stripe-light) 0px,
+      var(--stripe-light) 2px,
+      var(--stripe-dark) 2px,
+      var(--stripe-dark) 4px
+    );
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .titlebar-text {
+    font-weight: bold;
+    font-size: 13px;
+    color: #000;
+    background: var(--bg);
+    padding: 1px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .window-body {
+    padding: 16px 18px 14px;
+  }
+
+  .label {
+    margin: 0 0 10px;
+    line-height: 1.4;
+  }
+
+  .field-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    font-family: "Courier New", Consolas, monospace;
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: #fff;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  input[type="text"]:disabled {
+    background: var(--bg-panel);
+    color: #9a9a9a;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 20px;
+    background: linear-gradient(to bottom, #ffffff, #d6d6d6);
+    color: #000;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 0 2px rgba(63, 111, 180, 0.25);
+    animation: glow 2.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow {
+    from { box-shadow: 0 0 0 2px rgba(63, 111, 180, 0.2); }
+    to   { box-shadow: 0 0 0 5px rgba(63, 111, 180, 0.45); }
+  }
+
+  button:active:not(:disabled) {
+    background: linear-gradient(to bottom, #cfe0f5, #9db8dd);
+    box-shadow: 0 0 0 2px rgba(63, 111, 180, 0.35);
+    animation: none;
+  }
+
+  button:disabled {
+    background: #e4e4e4;
+    color: #9a9a9a;
+    border-color: #bbb;
+    box-shadow: none;
+    animation: none;
+    cursor: default;
+  }
+
+  button:focus-visible,
+  input[type="text"]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .hint {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .statusbar {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    min-height: 18px;
+  }
+
+  .radar {
+    flex: none;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #1a1a1a;
+    border: 1px solid var(--border-strong);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .radar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: conic-gradient(from 0deg, #33ff33, transparent 30%);
+    animation: sweep 1.6s linear infinite;
+  }
+
+  @keyframes sweep {
+    to { transform: rotate(360deg); }
+  }
+
+  #statusText {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #cycleText {
+    flex: none;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<main class="window">
+  <div class="titlebar">
+    <span class="titlebar-text">Aerodrome Chart Lookup</span>
+  </div>
+
+  <div class="window-body">
+    <p class="label" id="formLabel">Airport ICAO code:</p>
+
+    <form id="searchForm" autocomplete="off">
+      <div class="field-row">
+        <input
+          type="text"
+          id="icaoInput"
+          maxlength="4"
+          placeholder="KDSM"
+          aria-labelledby="formLabel"
+          disabled
+        >
+        <button type="submit" id="searchBtn" disabled>Search</button>
+      </div>
+    </form>
+
+    <p class="hint">Opens in a new tab.</p>
+
+    <div class="statusbar" role="status" aria-live="polite">
+      <span class="radar" aria-hidden="true"></span>
+      <span id="statusText">Loading airport diagram database&hellip;</span>
+      <span id="cycleText"></span>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  var input = document.getElementById('icaoInput');
+  var btn = document.getElementById('searchBtn');
+  var form = document.getElementById('searchForm');
+  var statusText = document.getElementById('statusText');
+  var cycleText = document.getElementById('cycleText');
+
+  var airports = null;
+
+  fetch('airports.json', { cache: 'no-store' })
+    .then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      airports = data.airports || {};
+      input.disabled = false;
+      btn.disabled = false;
+      statusText.textContent = 'Ready.';
+      if (data.cycle) {
+        cycleText.textContent = 'Cycle ' + data.cycle;
+      }
+      input.focus();
+    })
+    .catch(function (err) {
+      statusText.textContent = 'Could not load the airport database. Reload to try again.';
+      console.error('Failed to load airports.json:', err);
+    });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!airports) return;
+
+    var code = input.value.trim().toUpperCase();
+    if (!code) {
+      statusText.textContent = 'Type an airport identifier first.';
+      return;
+    }
+
+    var entry = airports[code];
+    if (entry && entry.pdf) {
+      statusText.textContent = 'Opening diagram for ' + code +
+        (entry.name ? ' \u2014 ' + entry.name : '') + '\u2026';
+      window.open(entry.pdf, '_blank', 'noopener');
+    } else {
+      statusText.textContent =
+        'No current FAA airport diagram found for \u201c' + code + '.\u201d Check the identifier, or that airport may not publish one.';
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
