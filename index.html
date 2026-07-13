@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aerodrome Chart Lookup</title>
+<style>
+  :root {
+    --blue: #0000aa;
+    --white: #ffffff;
+    --yellow: #ffff55;
+    --cyan: #55ffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--blue);
+    color: var(--white);
+    font-family: "Courier New", Consolas, monospace;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 24px;
+  }
+  .dos-box {
+    width: 100%;
+    max-width: 460px;
+    border: 4px double var(--white);
+    background: var(--blue);
+    padding: 6px 24px 22px;
+  }
+  .ascii-rule {
+    margin: 0;
+    color: var(--yellow);
+    font-size: 14px;
+    line-height: 1.2;
+    letter-spacing: -1px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .dos-title {
+    text-align: center;
+    font-weight: bold;
+    color: var(--yellow);
+    letter-spacing: 2px;
+    margin: 4px 0 14px;
+    text-transform: uppercase;
+  }
+  .label {
+    color: var(--white);
+    margin: 16px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 14px;
+  }
+  .field-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  input[type="text"] {
+    background: #000000;
+    color: var(--cyan);
+    border: 2px solid var(--white);
+    font-family: inherit;
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 5px 8px;
+    outline: none;
+  }
+  input[type="text"]:disabled { color: #4a7a7a; border-color: #7777cc; }
+  button {
+    background: var(--blue);
+    color: var(--white);
+    border: 2px solid var(--white);
+    font-family: inherit;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 16px;
+    cursor: pointer;
+  }
+  button:active:not(:disabled) { background: var(--white); color: var(--blue); }
+  button:disabled { color: #7777cc; border-color: #7777cc; cursor: default; }
+  input[type="text"]:focus-visible, button:focus-visible {
+    outline: 2px dashed var(--yellow);
+    outline-offset: 2px;
+  }
+  .hint { color: var(--cyan); font-size: 12px; margin-top: 14px; }
+  .statusrow {
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .indicator { width: 10px; height: 10px; flex: none; background: var(--yellow); }
+  #statusText { flex: 1; }
+  #cycleText { color: var(--cyan); }
+</style>
+</head>
+<body>
+<div class="dos-box">
+  <pre class="ascii-rule">════════════════════════════════════════════════════════════════════════════════</pre>
+  <p class="dos-title">Aerodrome Chart Lookup</p>
+  <pre class="ascii-rule">════════════════════════════════════════════════════════════════════════════════</pre>
+
+  <form id="searchForm" autocomplete="off">
+    <p class="label" id="formLabel">Aerodrome ICAO code:</p>
+    <div class="field-row">
+      <input type="text" id="icaoInput" maxlength="4" placeholder="KDEN" aria-labelledby="formLabel" disabled>
+      <button type="submit" id="searchBtn" disabled>Search</button>
+    </div>
+  </form>
+
+  <p class="hint">Test version. Not for navigation. Current support for FAA locations only.</p>
+
+  <div class="statusrow" role="status" aria-live="polite">
+    <span class="indicator" aria-hidden="true"></span>
+    <span id="statusText">Loading airport diagram database&hellip;</span>
+    <span id="cycleText"></span>
+  </div>
+</div>
+
+<script>
+(function () {
+  var input = document.getElementById('icaoInput');
+  var btn = document.getElementById('searchBtn');
+  var form = document.getElementById('searchForm');
+  var statusText = document.getElementById('statusText');
+  var cycleText = document.getElementById('cycleText');
+
+  var airports = null;
+  var statusResetTimer = null;
+
+  fetch('airports.json', { cache: 'no-store' })
+    .then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function (data) {
+      airports = data.airports || {};
+      input.disabled = false;
+      btn.disabled = false;
+      statusText.textContent = 'Ready.';
+      if (data.cycle) {
+        cycleText.textContent = 'AIRAC ' + data.cycle;
+      }
+      input.focus();
+    })
+    .catch(function (err) {
+      statusText.textContent = 'Could not load the airport database. Reload to try again.';
+      console.error('Failed to load airports.json:', err);
+    });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!airports) return;
+
+    if (statusResetTimer) {
+      clearTimeout(statusResetTimer);
+      statusResetTimer = null;
+    }
+
+    var code = input.value.trim().toUpperCase();
+    if (!code) {
+      statusText.textContent = 'Type an airport identifier first.';
+      return;
+    }
+
+    var entry = airports[code];
+    if (entry && entry.pdf) {
+      statusText.textContent = 'Opening diagram for ' + code +
+        (entry.name ? ' \u2014 ' + entry.name : '') + '\u2026';
+      window.open(entry.pdf, '_blank', 'noopener');
+      statusResetTimer = setTimeout(function () {
+        statusText.textContent = 'Ready.';
+        statusResetTimer = null;
+      }, 10000);
+    } else {
+      statusText.textContent =
+        'No aerodrome chart found for \u201c' + code + '.\u201d';
+    }
+  });
+})();
+</script>
+</body>
+</html>
